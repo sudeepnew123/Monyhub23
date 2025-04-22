@@ -173,6 +173,67 @@ def receive_money(message):
 
     bot.reply_to(message, f"Received ₹{tx['amount']}.")
     bot.send_message(tx['sender_id'], f"₹{tx['amount']} sent to {message.from_user.first_name} is complete.")
+    
+@bot.message_handler(commands=['pay'])
+def mention_send(message):
+    try:
+        if not message.entities or message.entities[1].type != 'pay':
+            bot.reply_to(message, "Tag a user like this: /pay @username amount")
+            return
+
+        parts = message.text.split()
+        if len(parts) != 3:
+            bot.reply_to(message, "Use: /pay @username amount")
+            return
+
+        username = parts[1].lstrip("@")
+        amount = int(parts[2])
+        sender_id = message.from_user.id
+
+        # Check sender balance
+        sender = user_db.setdefault(sender_id, {"name": message.from_user.first_name, "balance": 0})
+        if sender["balance"] < amount:
+            bot.reply_to(message, "Insufficient balance.")
+            return
+
+        # Find recipient by username
+        recipient_id = None
+        for uid, data in user_db.items():
+            if data.get("name", "").lower() == username.lower():
+                recipient_id = uid
+                break
+
+        if recipient_id is None:
+            bot.reply_to(message, "User not found or hasn't started the bot.")
+            return
+
+        # Transfer
+        sender["balance"] -= amount
+        user_db[recipient_id]["balance"] += amount
+        save_all_data()
+
+        bot.reply_to(message, f"₹{amount} sent to @{username}.")
+        bot.send_message(recipient_id, f"You've received ₹{amount} from {message.from_user.first_name}!")
+
+    except Exception as e:
+        bot.reply_to(message, f"Error: {str(e)}")
+        
+@bot.message_handler(commands=['info'])
+def check_profile(message):
+    user_id = message.from_user.id
+    user = user_db.setdefault(user_id, {"name": message.from_user.first_name, "balance": 0})
+
+    # Get the user's profile picture
+    try:
+        profile_photos = bot.get_user_profile_photos(user_id)
+        if profile_photos.total_count > 0:
+            # If user has a profile photo, get the first photo
+            photo_id = profile_photos.photos[0][-1].file_id
+            bot.send_photo(message.chat.id, photo_id, caption=f"Name: {user['name']}\nBalance: ₹{user['balance']}")
+        else:
+            bot.reply_to(message, f"Name: {user['name']}\nBalance: ₹{user['balance']}\nNo profile photo.")
+    except Exception as e:
+        bot.reply_to(message, f"Error fetching profile photo: {str(e)}"
 
 @bot.message_handler(commands=['daily'])
 def daily_gift(message):
