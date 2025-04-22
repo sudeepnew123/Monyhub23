@@ -6,7 +6,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-API_TOKEN = 'Tera_Bot_Token_Yaha_Laga'  # Replace with your bot token
+API_TOKEN = '7606806490:AAFe2V7yzGe6gpnD9Z9bWrFMdSnEWquuRIw'  # Replace with your bot token
 bot = telebot.TeleBot(API_TOKEN)
 
 DATA_FILE = "monyhub_data.json"
