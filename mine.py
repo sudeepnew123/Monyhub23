@@ -218,38 +218,6 @@ def mention_send(message):
     except Exception as e:
         bot.reply_to(message, f"Error: {str(e)}")
         
-@bot.message_handler(commands=['info'])
-def check_profile(message):
-    user_id = message.from_user.id
-    user = user_db.setdefault(user_id, {"name": message.from_user.first_name, "balance": 0})
-
-    # Get the user's profile picture
-    try:
-        profile_photos = bot.get_user_profile_photos(user_id)
-        if profile_photos.total_count > 0:
-            # If user has a profile photo, get the first photo
-            photo_id = profile_photos.photos[0][-1].file_id
-            bot.send_photo(message.chat.id, photo_id, caption=f"Name: {user['name']}\nBalance: ₹{user['balance']}")
-        else:
-            bot.reply_to(message, f"Name: {user['name']}\nBalance: ₹{user['balance']}\nNo profile photo.")
-    except Exception as e:
-        bot.reply_to(message, f"Error fetching profile photo: {str(e)}"
-
-@bot.message_handler(commands=['daily'])
-def daily_gift(message):
-    user_id = message.from_user.id
-    now = datetime.now()
-    last_claim = last_daily_claim.get(user_id)
-
-    if last_claim and now - last_claim < timedelta(days=1):
-        bot.reply_to(message, "You've already claimed daily gift.")
-        return
-
-    user = user_db.setdefault(user_id, {"name": message.from_user.first_name, "balance": 0})
-    user["balance"] += 100
-    last_daily_claim[user_id] = now
-    save_all_data()
-    bot.reply_to(message, f"₹100 claimed! New balance: ₹{user['balance']}")
 
 @bot.message_handler(commands=['history'])
 def view_history(message):
@@ -321,6 +289,31 @@ def mine_game(message):
 
     save_all_data()
     bot.reply_to(message, result)
+    
+@bot.message_handler(commands=['profile'])
+def check_profile(message):
+    user_id = message.from_user.id
+    user = user_db.setdefault(user_id, {"name": message.from_user.first_name, "balance": 0})
+
+    caption = f"""
+<b>👤 Profile Info</b>
+
+<b>Name:</b> {user['name']}
+<b>User ID:</b> {user_id}
+<b>Balance:</b> ₹{user['balance']}
+
+Use <b>/daily</b> to claim ₹100 daily gift!
+"""
+
+    try:
+        photos = bot.get_user_profile_photos(user_id)
+        if photos.total_count > 0:
+            file_id = photos.photos[0][-1].file_id
+            bot.send_photo(message.chat.id, file_id, caption=caption, parse_mode="HTML")
+        else:
+            bot.reply_to(message, caption, parse_mode="HTML")
+    except Exception as e:
+        bot.reply_to(message, f"Error fetching profile photo: {str(e)}")
 
 # Gift sender
 
