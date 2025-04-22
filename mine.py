@@ -233,6 +233,33 @@ def redeem_code(message):
 
     bot.reply_to(message, f"Redeemed ₹{tx['amount']}! New balance: ₹{user_db[recipient_id]['balance']}")
     bot.send_message(GROUP_ID, f"Gift code {code} has been redeemed by {message.from_user.first_name}. Amount: ₹{tx['amount']}")
+    
+@bot.message_handler(commands=['mine'])
+def mine_game(message):
+    user_id = message.from_user.id
+    user = user_db.setdefault(user_id, {"name": message.from_user.first_name, "balance": 0})
+
+    parts = message.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        bot.reply_to(message, "Use: /mine [1-5]")
+        return
+
+    choice = int(parts[1])
+    if choice < 1 or choice > 5:
+        bot.reply_to(message, "Pick a number between 1 and 5.")
+        return
+
+    bomb_position = random.randint(1, 5)
+
+    if choice == bomb_position:
+        user["balance"] = max(0, user["balance"] - 50)
+        result = f"💣 Boom! You hit the bomb at position {bomb_position}.\nYou lost ₹50. New balance: ₹{user['balance']}"
+    else:
+        user["balance"] += 100
+        result = f"✅ Safe! No bomb at position {choice}.\nYou won ₹100! New balance: ₹{user['balance']}"
+
+    save_all_data()
+    bot.reply_to(message, result)
 
 # Gift sender
 
